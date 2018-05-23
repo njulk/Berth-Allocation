@@ -1,55 +1,97 @@
+ï»¿
 #include<stdio.h>
 #include<stdlib.h>
 #include<iostream>
 #include<vector>
+#include<string.h>
+#include<math.h>
 #include<time.h>
 #include<map>
 #include<algorithm>
+#include<stdlib.h>
+#include<exception>
 using namespace std;
+#define normal
+#undef normal
+
 #define SIZE 100
-#define GROUP_SIZE 100  // ÖÖÈº¹æÄ£
+#define GROUP_SIZE 100  // ç§ç¾¤è§„æ¨¡
 #define INF 999999
-#define maxInter 100  // ×Üµü´ú´ÎÊı
-#define PMUTATION 0.75  //Í»±äÂÊ
-#define craneSize 10 //°¶ÇÅÊıÁ¿
-#define maxLine 1300//°¶Ïß³¤¶È×î´óÖµ
-//#define maxCrane 5 //µ¥¸ö´¬Ê¹ÓÃµÄ×î´ó°¶ÇÅÊıÁ¿
-#define X1 1300 //Î´Íê³É¹¤×÷Á¿µÄºÄ·Ñ´ú¼Û
+#define maxInter 6000  // æ€»è¿­ä»£æ¬¡æ•°
+#define PMUTATION 0.1  //çªå˜ç‡
+#define crossProbability 0.9
+int craneSize; //å²¸æ¡¥æ•°é‡
+#define maxLine 3000//å²¸çº¿é•¿åº¦æœ€å¤§å€¼
+//#define maxCrane 5 //å•ä¸ªèˆ¹ä½¿ç”¨çš„æœ€å¤§å²¸æ¡¥æ•°é‡
+#define INT_MAX ((int)(~0U>>1))  
+#define INT_MIN (-INT_MAX - 1) 
+#define X1 6000 //æœªå®Œæˆå·¥ä½œé‡çš„è€—è´¹ä»£ä»·
 int asalary[4];
 int esalary[4];
-
-int T, L, N;//¸Û¿Ú·şÎñÊ±³¤£¬¸Û¿Ú³¤¶È£¬Í£´¬µÄÊıÁ¿¡£
+int workefficiency[24];
+int craneden[10];
+int T, L, N;//æ¸¯å£æœåŠ¡æ—¶é•¿ï¼Œæ¸¯å£é•¿åº¦ï¼Œåœèˆ¹çš„æ•°é‡ã€‚
 
 int best_pos, best_f;
+FILE *fpdraw,*bestplan;
+
+
 
 
 typedef struct Boat{
-	int arritime;//´¬µ½´ïÊ±¼ä
-	int leavetime;//´¬¹æ¶¨Àë¿ªµÄ½ØÖ¹Ê±¼ä
-	int workload;//¹¤×÷Á¿
-	int boatwidth;//´¬¿í¶È
-	int goodlocation;//Æ«ºÃµÄ´¬Í£²´Î»ÖÃ
-	int bertlocation;//´¬Í£²´Î»ÖÃ
-	int starttime;//Êµ¼ÊÍ£¿¿µÄÊ±¼ä
-	int endtime;//Êµ¼ÊÀë¿ªµÄÊ±¼ä
+	int arritime;//èˆ¹åˆ°è¾¾æ—¶é—´
+	long long leavetime;//èˆ¹è§„å®šç¦»å¼€çš„æˆªæ­¢æ—¶é—´
+	int workload;//å·¥ä½œé‡
+	int boatwidth;//èˆ¹å®½åº¦
+	int goodlocation;//åå¥½çš„èˆ¹åœæ³Šä½ç½®
+	int bertlocation;//èˆ¹åœæ³Šä½ç½®
+	int starttime;//å®é™…åœé çš„æ—¶é—´
+	int endtime;//å®é™…ç¦»å¼€çš„æ—¶é—´
 	int ID;
 	bool find;
-	int boatMaxCrane;//µ¥¸ö´¬Ö»Ê¹ÓÃµÄ×î´ó°¶ÇÅÊıÁ¿
-	vector<int> percrane;//Ğ¶»õÊ±ºòÃ¿Ğ¡Ê±°¶ÇÅÊıÁ¿
+	int boatMaxCrane;//å•ä¸ªèˆ¹åªä½¿ç”¨çš„æœ€å¤§å²¸æ¡¥æ•°é‡
+	vector<int> percrane;//å¸è´§æ—¶å€™æ¯å°æ—¶å²¸æ¡¥æ•°é‡
 	Boat() {
 
 	}
 
 } Boat;
-void cpBoat(Boat src[], Boat dst[]);
+void cpBoat(const Boat src[], Boat dst[]);
+typedef struct allcost {
+	long long cost;
+	long long costT;
+	long long costS;
+	bool allfind;
+	allcost() :cost(0), costS(0), costT(0),allfind(true) {
+
+	}
+	allcost(const allcost& s) {
+		cost = s.cost;
+		costS = s.costS;
+		costT = s.costT;
+		allfind = s.allfind;
+	}
+	bool operator <(const allcost& s) const{
+		if (cost < s.cost) {
+			return true;
+		}
+		return false;
+	}
+	bool operator >(const allcost& s) const{
+		if (cost > s.cost) {
+			return true;
+		}
+		return false;
+	}
+}allcost;
 typedef struct Group{
 	int order[SIZE];
 	Boat boat[SIZE];
 	Group() {
 
 	}
-	int f;
-	bool operator <(const Group& s) {
+	allcost f;
+	bool operator <(const Group& s) const {
 		if (f < s.f) {
 			return true;
 		}
@@ -58,7 +100,8 @@ typedef struct Group{
 			return false;
 		}
 	}
-	Group(Group& s) {
+
+	Group(const Group& s) {
 		cpBoat(s.boat, boat);
 		for (int i = 0; i < SIZE; i++) {
 			order[i] = s.order[i];
@@ -66,7 +109,13 @@ typedef struct Group{
 		f = s.f;
 	}
 }Group;
-int cmp(const Group& a, const Group& b) {
+bool isSame(Group&a, Group& b) {
+	if (a.f.cost != b.f.cost || a.f.costS!=b.f.costS || a.f.costT!=b.f.costT)
+		return false;
+	return true;
+}
+
+int cmp(Group& a,  Group& b) {
 	if (a.f > b.f)
 		return 1;
 	else
@@ -80,11 +129,12 @@ typedef struct Record {
 	int bertlocation;
 	vector<int> percrane;
 	bool find;
-	int cost;
-	Record() :find(false),cost(0) {
+	allcost cost;
+	
+	Record() :find(false) {
 
 	}
-	Record(Record& s) {
+	Record(const Record& s) {
 		this->start = s.start;
 		this->bertlocation = s.bertlocation;
 		this->cost = s.cost;
@@ -99,7 +149,7 @@ typedef struct Record {
 
 
 
-void cpBoat(Boat src[], Boat dst[]) {
+void cpBoat(const Boat src[], Boat dst[]) {
 	for (int i = 0; i < N; i++) {
 		dst[i].arritime = src[i].arritime;
 		dst[i].leavetime = src[i].leavetime;
@@ -153,20 +203,44 @@ void swapGroup(Group& a, Group& b) {
 	swap(a.f, b.f);
 	
 }
-int mp_crane[SIZE];//mp_crane[t]±íÊ¾tÊ±¼äÊ±µÄÊ£Óà¿ÕÏĞ°¶ÇÅÊı
-bool mp_bertlocation[SIZE][maxLine];//Í£²´Î»ÖÃºÍÊ±¼äµÄ¶şÎ¬Õ¼ÓÃÍ¼
+int mp_crane[500];//mp_crane[t]è¡¨ç¤ºtæ—¶é—´æ—¶çš„å‰©ä½™ç©ºé—²å²¸æ¡¥æ•°
+bool mp_bertlocation[500][maxLine];//åœæ³Šä½ç½®å’Œæ—¶é—´çš„äºŒç»´å ç”¨å›¾
 Boat a[SIZE];
 Boat a_copy[SIZE];
 Group g[GROUP_SIZE];
 Group children;
+int mp_cranesrc[200];
+void init_cranesrc(){
+	for (int i = 0; i < 200; i++) {
+
+#ifndef normal
+		int index = i%24;
+		if(index<6 || index>17){
+			int tmp= rand() % (craneSize/2);
+			mp_cranesrc[i]=craneSize/2+1+tmp;
+		}
+		else
+		{
+			mp_cranesrc[i]=craneSize;
+		}
+#else
+		mp_cranesrc[i] = craneSize;
+#endif
+		//cout<<mp_cranesrc[i]<<" ";
+		//mp_crane[i] = (index > 5 && index < 18) ? craneSize:craneSize/2+2;		
+	}
+}
+
+
 void init() {
 	//memset(mp_crane, false, sizeof(mp_crane));
 	memset(mp_bertlocation, 0, sizeof(mp_bertlocation));
-	for (int i = 0; i < SIZE; i++) {
-		mp_crane[i] = craneSize;
+	for (int i = 0; i < 200; i++) {
+		mp_crane[i]=mp_cranesrc[i];
+		//mp_crane[i] = (index > 5 && index < 18) ? craneSize:craneSize/2+2;		
 	}
-	//f = INF;
-	//min_f = INF;
+	
+	
 }
 
 bool _in(int x, int y) {
@@ -195,7 +269,7 @@ bool isEmpty(Boat& a, int t, int l) {
 }
 Record endTime(Boat& a, int t, int l) {
 	int load = 0;
-	int end = t;
+	long long end = t;
 	Record re;
 	re.bertlocation = l;
 	int maxCrane = a.boatMaxCrane;
@@ -205,11 +279,33 @@ Record endTime(Boat& a, int t, int l) {
 		if (!isEmpty(a, end, l)) {
 			break;
 		}
+		
+		int tmp_time = end % 24;
+		int cur_efficiency = -1;
+		/*if (tmp_time >= 6 && tmp_time < 18) {
+			cur_efficiency = 30;
+		}
+		else
+		{
+			cur_efficiency = 15;
+			maxCrane = craneden[maxCrane];
+		}*/
+		cur_efficiency = workefficiency[tmp_time];
+		if(tmp_time < 6 && tmp_time > 17)
+		{
+			maxCrane = craneden[a.boatMaxCrane];
+		}		
+		//	cout<<a.boatMaxCrane<<" "<<maxCrane<<endl;
+		 //workefficiency[tmp_time];
+		//maxCrane = maxCrane >> craneden[tmp_time];
+		//cout << workefficiency[tmp_time] << endl;
+		//int cur_efficiency = 30;
 		if (mp_crane[end] >= maxCrane) {
-			int tmpload = maxCrane * 30;
+			
+			int tmpload = maxCrane * cur_efficiency;
 			if (tmpload >= (a.workload-load))
 			{	
-				re.percrane.push_back(ceil(((double)(a.workload-load))/30.0));
+				re.percrane.push_back(ceil(((double)(a.workload-load))/(double)cur_efficiency));
 				load = a.workload;
 				re.find = true;
 				end++;
@@ -224,10 +320,10 @@ Record endTime(Boat& a, int t, int l) {
 		}
 		else
 		{
-			int tmpload = mp_crane[end] * 30;
+			int tmpload = mp_crane[end] * cur_efficiency;
 			if (tmpload >= (a.workload - load))
 			{				
-				re.percrane.push_back(ceil(((double)(a.workload - load)) / 30.0));
+				re.percrane.push_back(ceil(((double)(a.workload - load)) / (double)(cur_efficiency)));
 				load = a.workload;
 				re.find = true;
 				end++;
@@ -248,45 +344,56 @@ Record endTime(Boat& a, int t, int l) {
 	if (re.find) {
 		re.start = t;
 		re.end = end;
-		re.cost += (end - a.leavetime)*20;
-		re.cost += abs(l - a.goodlocation)*3;
+		re.cost.costT = (end - a.leavetime);
+		re.cost.costT = re.cost.costT > 0 ? re.cost.costT : 0;
+		//cout << re.cost.costT << "   "<<re.cost.cost << endl;
+		re.cost.cost += (re.cost.costT+100)*35;
+		//32
+		
+		
+		//re.cost += abs(l - a.goodlocation);
 		for (int i = t; i < end; i++) {
 			int s = i % 24;
 			if (s >= 0 && s <= 5) {
-				re.cost += re.percrane[i - t] * asalary[0];
+				re.cost.costS += re.percrane[i - t] * asalary[0];
 				//re.cost += re.percrane[i - t] * esalary[0];
 			}
 			else if (s>=6 && s<=11) {
-				re.cost += re.percrane[i - t] * asalary[1];
+				re.cost.costS += re.percrane[i - t] * asalary[1];
 				//re.cost += re.percrane[i - t] * esalary[1];
 			}
 			else if (s>=12 && s<=17) {
-				re.cost += re.percrane[i - t] * asalary[2];
+				re.cost.costS += re.percrane[i - t] * asalary[2];
 				//re.cost += re.percrane[i - t] * esalary[2];
 			}
 			else
 			{
-				re.cost += re.percrane[i - t] * asalary[3];
+				re.cost.costS += re.percrane[i - t] * asalary[3];
 				//re.cost += re.percrane[i - t] * esalary[3];
 			}
 		}
+		re.cost.cost += re.cost.costS;
 	}
 	else
 	{
-		re.cost = INF;
+		re.cost.cost = INF;
 	}
 	return re;
 }
 
-int Greedy(Boat a[])//Ì°ĞÄ°Ú·Å
+allcost Greedy(Boat a[])//è´ªå¿ƒæ‘†æ”¾
 {
 	init();
-	int cost = 0;
+	allcost gcost;
 	for (int i = 0; i < N; i++) {
+		//if (a[i].ID == 4) {
+			//cout << "kaishi" << endl;
+		//}
 		bool find = false;
 		Record re;
+	//	cout<<"for xunhuanå‰";
 		for (int t = a[i].arritime; t < T; t++) {
-			int maxl = max((L - a[i].boatwidth - a[i].goodlocation), a[i].bertlocation);
+			int maxl = max((L - a[i].boatwidth - a[i].goodlocation), a[i].goodlocation);
 			if (mp_crane[t] == 0)
 				continue;
 			for (int l = 0; l < maxl; l++) {
@@ -309,7 +416,7 @@ int Greedy(Boat a[])//Ì°ĞÄ°Ú·Å
 					}
 				}
 				if (l2 >= 0) {
-					Record tmp = endTime(a[i], t, l1);
+					Record tmp = endTime(a[i], t, l2);
 					if (tmp.find) {
 						//cout << "boat ID:" << a[i].ID << " ";
 						//cout << "cost" << tmp.cost << endl;
@@ -324,8 +431,8 @@ int Greedy(Boat a[])//Ì°ĞÄ°Ú·Å
 						
 					}
 				}
-				if (re.find)
-					break;
+				//if (re.find)
+					//break;
 			}
 			if (re.find) {
 				break;
@@ -333,14 +440,17 @@ int Greedy(Boat a[])//Ì°ĞÄ°Ú·Å
 		}
 		if (re.find)
 		{
-			cost += re.cost;
+			//cout << gcost.cost << " " << re.cost.cost << endl;
+			gcost.cost += re.cost.cost;
+			gcost.costS += re.cost.costS;
+			gcost.costT += re.cost.costT;
 			a[i].bertlocation = re.bertlocation;
 			a[i].endtime = re.end;
 			a[i].starttime = re.start;
 			a[i].percrane = re.percrane;
 			//cout << "boat ID:" << a[i].ID << ";" <<"boat width:"<<a[i].boatwidth<<endl;
 			for (int j = re.start; j < re.end; j++) {
-				//cout << "Ê±¼ä£º" << j << " ";
+				//cout << "æ—¶é—´ï¼š" << j << " ";
 				for (int x = re.bertlocation; x < (re.bertlocation + a[i].boatwidth); x++) {
 					mp_bertlocation[j][x] = true;
 				}
@@ -353,14 +463,15 @@ int Greedy(Boat a[])//Ì°ĞÄ°Ú·Å
 		else
 		{
 			a[i].find = false;
-			cost += X1;
-			//cout << "boat ID:" << a[i].ID << "Ã»ÓĞºÏÊÊµÄÎ»×Ó" << endl;
+			gcost.allfind = false;
+			gcost.cost += X1;
+			//cout << "boat ID:" << a[i].ID << "æ²¡æœ‰åˆé€‚çš„ä½å­" << endl;
 		}
 	}
-	return cost;
-}
+	return gcost;
+};
 
-//½»²æ»î¶¯
+//äº¤å‰æ´»åŠ¨
 void cross(int start_pos, int end_pos, int parent1[], int parent2[]) {
 	bool used[SIZE];
 	memset(used, false, sizeof(used));
@@ -391,51 +502,175 @@ void cross(int start_pos, int end_pos, int parent1[], int parent2[]) {
 
 }
 
-FILE *in, *out;
+FILE *in;
 
-int main() {
+void collectData(const Group& s, FILE* plan){
+	int boatnum[200];
+	int maxday=-1;
+	for(int i=0;i<200;i++){
+		boatnum[i]=0;
+	}
+	for(int i=0; i<N; i++){
+		const Boat* a = &(s.boat[i]);
+		int start = a->starttime;
+		int end = a->endtime-1;
+		if(end>maxday)
+		{
+			maxday=end;
+		}
+		for(int j=start; j<=end; j++){
+			boatnum[j]+=a->percrane[j -start];
+		}
+	}
+	//cout<<"æ¯å¤©æ‰€æœ‰èˆ¹æ€»å…±ä½¿ç”¨çš„å²¸æ¡¥æ•°åˆ†å¸ƒï¼š  ";
+	fprintf(plan,"%s","æ¯å¤©æ‰€æœ‰èˆ¹æ€»å…±ä½¿ç”¨çš„å²¸æ¡¥æ•°åˆ†å¸ƒï¼š  ");
+	for(int i=0;i<maxday;i++){
+		//cout<<boatnum[i]<<" ";
+		fprintf(plan,"%d%s",boatnum[i]," ");
+	}
+	//cout<<endl;
+	fprintf(plan,"\n");
+}
+
+int preMeanf = -1;
+int preMeanT = -1;
+int preMeanS = -1;
+void writePlan(const Group& a) {
+        fprintf(bestplan, "%s%s%s\n", "*********************", "ç¬¬xç§æ–¹æ¡ˆ**************************");
+        for (int i = 0; i < N; i++) {
+                const Boat* s = &(a.boat[i]);
+                int id = s->ID + 1;
+                fprintf(bestplan, "%s%d\n", "èˆ¹ID:", id);
+                if (!s->find) {
+                        cout << "no find" << endl;
+                        fprintf(bestplan, "%s\n", "æ‰¾ä¸åˆ°æ–¹æ¡ˆ");
+                        continue;
+                }
+                fprintf(bestplan, "%s%d%s%d\n", "èˆ¹å®½:", s->boatwidth, ";  åœé ä½ç½®:", s->bertlocation);
+                int end = s->endtime - 1;
+                fprintf(bestplan, "%s%d%s%d\n", "å¼€å§‹æ—¶é—´:", s->starttime, ";   ç»“æŸæ—¶é—´:", end);
+                fprintf(bestplan, "%s", "æ¯å¤©ä½¿ç”¨çš„å²¸æ¡¥æ•°:");
+                for (int j = s->starttime; j < s->endtime; j++) {
+                        fprintf(bestplan, "%d%s", s->percrane[j - s->starttime], " ");
+                }
+                fprintf(bestplan, "\n");
+
+        }
+        //cout << "æ€»çš„è€—è´¹å€¼æ˜¯" << a.f.cost << endl;^M
+        fprintf(bestplan, "%s%d\n", "æ€»çš„è€—è´¹å€¼æ˜¯ï¼š",a.f.cost);
+        fprintf(bestplan, "%s%d\n", "æ—¶é—´è€—è´¹å€¼æ˜¯ï¼š", a.f.costT);
+        fprintf(bestplan, "%s%d\n", "å·¥èµ„è€—è´¹å€¼æ˜¯ï¼š", a.f.costS);
+        collectData(a,bestplan);
+        fprintf(bestplan, "%s\n", "**************************************");
+
+}
+
+
+
+
+
+int main(int argc,char* argv[]) {
+//æ¸¯å£æœåŠ¡æ€»æ—¶é•¿ï¼Œèˆ¹çš„æ•°é‡ï¼Œæ¸¯å£æ€»é•¿åº¦
+	    T = atoi(argv[6]);
+        N = atoi(argv[7]);
+        L = atoi(argv[8]);
+	craneSize = atoi(argv[9]);
+	double dResult;
+	clock_t lBefore = clock();
+	
+	if(atoi(argv[2])==100){
+		#undef normal
+	}
+	int seed = (unsigned)time(NULL);
+	srand(seed);
+	init_cranesrc();
 	init();
-	int tmp_salary[] = { 70,50,50,70 };
+	fpdraw = fopen( argv[3], "w+");
+	if (fpdraw == NULL) {
+		cout << "create draw.txt fails" << endl;
+		return 0;
+	}
+	bestplan = fopen(argv[4], "w+");
+	if (bestplan == NULL) {
+		cout << "create plan.txt fails" << endl;
+		return 0;
+	}
+#ifndef normal
+	int tmp_salary[] = { 100,50,50,100 };
+	tmp_salary[1]=atoi(argv[2]);
+	tmp_salary[2]=atoi(argv[2]);
+	tmp_salary[0]=atoi(argv[5]);
+	tmp_salary[3]=atoi(argv[5]);
+
+#else
+	int tmp_salary[] = { 80,80,80,80 };
+#endif // !normal
+
+	
 	for (int i = 0; i < 4; i++) {
 		asalary[i] = tmp_salary[i];
 		esalary[i] = tmp_salary[i];
 	}
-	//¸Û¿Ú·şÎñ×ÜÊ±³¤£¬´¬µÄÊıÁ¿£¬¸Û¿Ú×Ü³¤¶È
-	T = 168;
-	N = 15;
-	L = 1200;
-	int seed = (unsigned)time(NULL);
-	srand(seed);
+	for (int i = 0; i < 6; i++) {
+#ifndef normal
+		workefficiency[i] = 20;
+#else
+		workefficiency[i] = 30;
+#endif // !normal
+		//craneden[i] = 1;
+	}
+	for (int i =6 ; i < 18; i++) {
+		workefficiency[i] = 30;
+		//craneden[i] = 0;
+	}
+	for (int i = 18; i < 24; i++) {
+#ifndef normal
+		workefficiency[i] = 20;
+#else
+		workefficiency[i] = 30;
+#endif // !normal
+		//craneden[i] = 1;
+	}
+	for (int i = 0; i < 10; i++) {
+#ifndef normal
+		craneden[i] = i;
+#else
+		craneden[i] = i - 1;
+#endif // !normal
+	}
+	craneden[0] = 0;
+	
 
 	
-	int ret=fopen_s(&in,"in.txt", "r");
-	if (ret!=0) {
+	in=fopen(argv[1], "r");
+	if (in==NULL) {
 		cout << "no find in.txt" << endl;
 		return 0;
 	}
 	for (int i = 0; i < N; i++) {
 		a[i].ID = i;
-		//ÊäÈë´¬µÄĞÅÏ¢£ºµ½´ïÊ±¼ä£¬´¬¿í£¬Æ«ºÃµÄÍ£²´Î»ÖÃ£¬´¬µÄÀë¿ªÊ±¼ä£¬´¬µÄĞ¶»õ¸ºÔØÁ¿,×î´ó×÷Òµ°¶ÇÅÊıÁ¿¡£
+		//è¾“å…¥èˆ¹çš„ä¿¡æ¯ï¼šåˆ°è¾¾æ—¶é—´ï¼Œèˆ¹å®½ï¼Œåå¥½çš„åœæ³Šä½ç½®ï¼Œèˆ¹çš„ç¦»å¼€æ—¶é—´ï¼Œèˆ¹çš„å¸è´§è´Ÿè½½é‡,æœ€å¤§ä½œä¸šå²¸æ¡¥æ•°é‡ã€‚
 		
 		//cin >> a[i].arritime >> a[i].goodlocation >> a[i].workload >> a[i].boatwidth >>  a[i].leavetime >> a[i].boatMaxCrane;
-		fscanf_s(in, "%d %d %d %d %d %d\n", &(a[i].arritime), &(a[i].goodlocation), &(a[i].workload), &(a[i].boatwidth), &(a[i].leavetime), &(a[i].boatMaxCrane));
+		fscanf(in, "%d %d %d %d %d %d\n", &(a[i].arritime), &(a[i].goodlocation), &(a[i].workload), &(a[i].boatwidth), &(a[i].leavetime), &(a[i].boatMaxCrane));
 		
 	}
 
-	//³õÊ¼»¯ÖÖÈº
+	//åˆå§‹åŒ–ç§ç¾¤
 	for (int i = 0; i < GROUP_SIZE; i++) {
+		//cout << "kaishi" << endl;
 		cpBoat(a, a_copy);
 		int a_tmp[SIZE] = { 0, };
 		for (int j = 0; j < N; j++) {
 			a_tmp[j] = a_copy[j].ID;
 		}
-		/*cout << "Ô­Ê¼ÅÅĞò";
+		/*cout << "åŸå§‹æ’åº";
 		for (int j = 0; j < N; j++) {
 			 cout<< a_tmp[j] << " ";
 		}
 		cout << endl;*/
 		random_N(a_tmp);
-		/*cout << "Ëæ»úÅÅĞò";
+		/*cout << "éšæœºæ’åº";
 		for (int j = 0; j < N; j++) {
 			cout<< a_tmp[j] << " ";
 		}
@@ -444,43 +679,68 @@ int main() {
 			g[i].order[j] = a_tmp[j];
 			cpOneBoat(a_copy[a_tmp[j]],g[i].boat[j]);			
 		}
-		g[i].f=Greedy(g[i].boat);
-		//cout <<"µÚi¸öÖÖÈº "<<i<<": cost"<< g[i].f << endl;
-		//cout << "********************************" << endl;
+		//cout<<"greedy å‰"<<endl;
+		try{
+			g[i].f=Greedy(g[i].boat);
+		}
+		catch(exception& e){
+			cout<<e.what()<<endl;
+			cout<<"greedy chuwenti"<<endl;
+		}
+		//cout<<"greedy hou"<<endl;
+		cout << "ç¬¬iä¸ªç§ç¾¤ " << i << ": cost";
+		cout << g[i].f.cost << " " << g[i].f.costS << " " << g[i].f.costT << endl;
+		if(g[i].f.allfind == false){
+			cout<<"æœ‰èˆ¹æ‰¾ä¸åˆ°æ–¹æ¡ˆ"<<endl;
+			Group& tmp=g[i];
+			for(int j=0; j<N; j++){
+				const Boat* s = &(tmp.boat[j]);
+				if(!s->find){
+					cout<<s->ID<<"  no find"<<endl;
+				}
+			}
+		}
+		cout << "********************************" << endl;
 	}
 
-	//ÂÖÅÌ·ÖÅä¸ÅÂÊ£¨Ê×ÏÈ¼ÆËãÖÖÈºÊÊÓ¦¶È£¬¸öÌåÊÊÓ¦¶È£¬¸øÃ¿¸ö¸öÌå·ÖÅäÂÖÅÌ¸ÅÂÊ£©
+	//è½®ç›˜åˆ†é…æ¦‚ç‡ï¼ˆé¦–å…ˆè®¡ç®—ç§ç¾¤é€‚åº”åº¦ï¼Œä¸ªä½“é€‚åº”åº¦ï¼Œç»™æ¯ä¸ªä¸ªä½“åˆ†é…è½®ç›˜æ¦‚ç‡ï¼‰
 	for (int ti = 1; ti <= maxInter; ti++) 
 	{
 		int sum_f = 0;
-		int fitness[GROUP_SIZE] = { 0, };//ÖÖÈº¸öÌåÊÊÓ¦¶ÈÖµ
-		double p[GROUP_SIZE] = { 0.0, };//ÖÖÈº¸öÌåÊÊÓ¦¶È¸ÅÂÊ
-		map<double, int>pie;//Ã¿¸ö¸öÌåµÄÀÛ»ı¸ÅÂÊ×é³ÉµÄÂÖ×ª¸ÅÂÊ
+		int fitness[GROUP_SIZE] = { 0, };//ç§ç¾¤ä¸ªä½“é€‚åº”åº¦å€¼
+		double p[GROUP_SIZE] = { 0.0, };//ç§ç¾¤ä¸ªä½“é€‚åº”åº¦æ¦‚ç‡
+		map<double, int>pie;//æ¯ä¸ªä¸ªä½“çš„ç´¯ç§¯æ¦‚ç‡ç»„æˆçš„è½®è½¬æ¦‚ç‡
 		pie.clear();
 		for (int i = 0; i < GROUP_SIZE; i++) {
-			sum_f += g[i].f;
+			sum_f += g[i].f.cost;
 		}
 		for (int i = 0; i < GROUP_SIZE; i++) {
-			fitness[i] = sum_f - g[i].f;//ÒòÎªµ±Ç°¸öÌåµÄg[i]µÄfÔ½´ó£¬Ö¤Ã÷´Ë·½·¨Ô½²»ºÃ£¬Ó¦¸Ã¸øÓëµÄ¸ÅÂÊÔ½Ğ¡
+			fitness[i] = sum_f - g[i].f.cost;//å› ä¸ºå½“å‰ä¸ªä½“çš„g[i]çš„fè¶Šå¤§ï¼Œè¯æ˜æ­¤æ–¹æ³•è¶Šä¸å¥½ï¼Œåº”è¯¥ç»™ä¸çš„æ¦‚ç‡è¶Šå°
 			p[i] = 1.0*fitness[i] / sum_f;
 		}
 		double ret = 0.0;
 		for (int i = 0; i < GROUP_SIZE; i++) {
 			ret += p[i];
-			pie[ret] = i;
+			//pie[ret] = i;
+		}
+		double rate = 0.0;
+		for (int i = 0; i < GROUP_SIZE; i++) {			
+			rate += p[i] / ret;
+			pie[rate] = i;
 		}
 		int number1, number2;
 		do
 		{
 			double p1 = (double)rand() / RAND_MAX;
 			double p2 = (double)rand() / RAND_MAX;
-			number1 = pie.lower_bound(p1)->second;//ÕÒ³ö¸ÅÂÊ±È½Ï´óµÄ¸¸´ú
-			number2 = pie.lower_bound(p2)->second;//ÕÒ³ö¸ÅÂÊ±È½Ï´óµÄ¸¸´ú
+			number1 = pie.lower_bound(p1)->second;//æ‰¾å‡ºæ¦‚ç‡æ¯”è¾ƒå¤§çš„çˆ¶ä»£
+			number2 = pie.lower_bound(p2)->second;//æ‰¾å‡ºæ¦‚ç‡æ¯”è¾ƒå¤§çš„çˆ¶ä»£
 		} while (number1==number2);
 
 		int number3 = rand() % N;
 		int number4 = rand() % N;
-		cross(number3, number4, g[number1].order, g[number2].order);//½»²æ²úÉú×Ó´ú¡£
+		if(crossProbability>((double)rand() / RAND_MAX))
+			cross(number3, number4, g[number1].order, g[number2].order);//äº¤å‰äº§ç”Ÿå­ä»£ã€‚
 		
 		if (PMUTATION > ((double)rand() / RAND_MAX)) {
 			for (int k = 1; k <= 4; k++) {
@@ -491,56 +751,107 @@ int main() {
 			}
 		}
 		children.f = Greedy(children.boat);
-
-		//Ëã³ö×Ó´úºó¸üĞÂÖÖÈº£¬Ñ¡ÔñÖÖÈºÖĞ±íÏÖ×î²îµÄ¸öÌå£¬½øĞĞ½»»»¡£
-		int worst_f = 0;
+		if (children.f.allfind == false) {
+			continue;
+		}
+		//ç®—å‡ºå­ä»£åæ›´æ–°ç§ç¾¤ï¼Œé€‰æ‹©ç§ç¾¤ä¸­è¡¨ç°æœ€å·®çš„ä¸ªä½“ï¼Œè¿›è¡Œäº¤æ¢ã€‚
+		int worst_f = INT_MIN;
 		int worst_pos = -1;
 		best_f = INT_MAX;
 		best_pos = -1;
-		for (int i = 0; i < GROUP_SIZE; i++) {//Ñ°ÕÒÄÚ²¿ÊÊÓ¦¶È×î²î¸öÌå
+		for (int i = 0; i < GROUP_SIZE; i++) {//å¯»æ‰¾å†…éƒ¨é€‚åº”åº¦æœ€å·®ä¸ªä½“
 			//cout << i << " " << g[i].f << endl;
-			if (g[i].f > worst_f) {
-				worst_f = g[i].f;
+			if (g[i].f.cost > worst_f) {
+				worst_f = g[i].f.cost;
 				worst_pos = i;
 			}
-			if (g[i].f < best_f) {
-				best_f = g[i].f;
+			if (g[i].f.cost < best_f) {
+				best_f = g[i].f.cost;
 				best_pos = i;
 			}
 		}
-		if (children.f < worst_f) {
+		Group cp=children;
+		if (children.f.cost < worst_f) {
 			swapGroup(children, g[worst_pos]);
 		}
 		sort(g, g + GROUP_SIZE);
 		int meanf = 0;
+		int meanfT = 0;
+		int meanfS = 0;
 		for (int i = 0; i < 10; i++) {
-			meanf += g[i].f;
+			meanf += g[i].f.cost;
+			meanfT += g[i].f.costT;
+			meanfS += g[i].f.costS;
+
 		}
-		meanf = meanf / 10;
-		cout << "µü´ú´ÎÊı£º" << ti << "ÊÊÓ¦Öµ" <<meanf << endl;
-		//cout << "µü´ú´ÎÊı£º" << ti << "ÊÊÓ¦Öµ" << g[0].f << endl;
+		meanf = meanf/10;
+		meanfT = meanfT/10;
+		meanfS = meanfS/10;
+		fprintf(fpdraw, "%d,%d,%d\n", meanf, meanfT, meanfS);
+		if (meanf == preMeanf && meanfT == preMeanT && meanfS == preMeanS)
+			continue;	
+		preMeanf = meanf;
+		preMeanT = meanfT;
+		preMeanS = meanfS;
+		cout << "è¿­ä»£æ¬¡æ•°ï¼š" << ti << "åŠ æƒé€‚åº”å€¼:" << meanf << ";æ—¶é—´é€‚åº”å€¼:" << meanfT << ";å·¥èµ„é€‚åº”å€¼:" << meanfS << endl;			
+		writePlan(cp);
+		//cout << "è¿­ä»£æ¬¡æ•°ï¼š" << ti << "é€‚åº”å€¼" << g[0].f << endl;
 	}
-	best_pos = 0;
-	for (int i = 0; i < N; i++) {
-		Boat* s=&(g[best_pos].boat[i]);
-		cout << "boat ID:" << s->ID << ";";
-		if (!s->find) {
-			cout << "no find" << endl;
-			continue;
+	//best_pos = 0;
+	int count = 0;
+	for (int index = 0; index <GROUP_SIZE; index++) {
+		if (index != 0) {
+			if (isSame(g[index], g[index - 1])) {
+				continue;
+			}			
 		}
-		cout<< "boat width:" << s->boatwidth << ";stoplocation" << s->bertlocation<< endl;
-		cout << "starttime:" << s->starttime << ";endtime:" << s->endtime << endl;
-		cout << "usedcranesize:";
-		for (int j = s->starttime; j < s->endtime; j++) {		
-			cout << s->percrane[j - s->starttime] <<" "<< endl;
+		if (count >= 100) {
+			break;
 		}
-		cout << "****************"<<endl;
+		cout << "*********************";
+		int order = count + 1;
+		fprintf(bestplan, "%s%s%d%s\n", "*********************", "ç¬¬", order, "ç§æ–¹æ¡ˆ**************************");
+		cout << "ç¬¬" << order << "ç§æ–¹æ¡ˆ" << "**************************" << endl;
+		for (int i = 0; i < N; i++) {
+			Boat* s = &(g[index].boat[i]);
+			cout << "boat ID:" << s->ID << ";";
+			int id = s->ID + 1;
+			fprintf(bestplan, "%s%d\n", "èˆ¹ID:", id);
+			if (!s->find) {
+				cout << "no find" << endl;
+				fprintf(bestplan, "%s\n", "æ‰¾ä¸åˆ°æ–¹æ¡ˆ");
+				continue;
+			}
+			cout << "boat width:" << s->boatwidth << ";stoplocation:" << s->bertlocation << ";goodbertlocation:"<<s->goodlocation << endl;
+			cout << "starttime:" << s->starttime << ";endtime:" << s->endtime << endl;
+			fprintf(bestplan, "%s%d%s%d\n", "èˆ¹å®½:", s->boatwidth, ";  åœé ä½ç½®:", s->bertlocation);
+			int end = s->endtime - 1;
+			fprintf(bestplan, "%s%d%s%d\n", "å¼€å§‹æ—¶é—´:", s->starttime, ";   ç»“æŸæ—¶é—´:", end);
+			cout << "usedcranesize:";
+			fprintf(bestplan, "%s", "æ¯å¤©ä½¿ç”¨çš„å²¸æ¡¥æ•°:");
+			for (int j = s->starttime; j < s->endtime; j++) {
+				cout << s->percrane[j - s->starttime] << " " << endl;
+				fprintf(bestplan, "%d%s", s->percrane[j - s->starttime], " ");
+			}
+			fprintf(bestplan, "\n");
+			
+			cout << "****************" << endl;
+
+		}
+		collectData(g[index],bestplan);
+		cout << "æ€»çš„è€—è´¹å€¼æ˜¯" <<g[index].f.cost<<endl;
+		fprintf(bestplan, "%s%d\n", "æ€»çš„è€—è´¹å€¼æ˜¯ï¼š", g[index].f.cost);
+		fprintf(bestplan, "%s%d\n", "æ—¶é—´è€—è´¹å€¼æ˜¯ï¼š", g[index].f.costT);
+		fprintf(bestplan, "%s%d\n", "å·¥èµ„è€—è´¹å€¼æ˜¯ï¼š", g[index].f.costS);
+		fprintf(bestplan, "%s\n", "**************************************");
+		count++;
 	}
-	cout << best_f << endl;
-
-
-
-
-
-
+	dResult = (double)(clock()-lBefore)/CLOCKS_PER_SEC;
+	fprintf(bestplan,"%s%lf","æ€»èŠ±è´¹ï¼š",dResult);	
+	if(fpdraw)
+		fclose(fpdraw);
+	if(bestplan)
+		fclose(bestplan);
+	if(in)
+		fclose(in);
 }
